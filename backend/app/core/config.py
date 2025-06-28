@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional, Literal
+from typing import Optional, List, Literal # Ajout de List
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://default_user:default_password@localhost:5432/dounie_cuisine_default_db"
@@ -14,11 +14,21 @@ class Settings(BaseSettings):
 
     # Paramètres de Logging
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    # Format de log plus détaillé si besoin:
-    # LOG_FORMAT: str = "%(asctime)s - %(name)s:%(lineno)d - %(levelname)s - %(message)s"
     LOG_FORMAT: str = "%(levelname)-8s | %(asctime)s | %(name)s:%(funcName)s:%(lineno)d - %(message)s"
     LOG_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
+    # Paramètres CORS
+    # https://fastapi.tiangolo.com/tutorial/cors/
+    # Par défaut, autoriser toutes les origines pour le développement.
+    # En production, spécifier les domaines autorisés.
+    ALLOWED_ORIGINS: List[str] = ["*"]
+    # Exemple pour production:
+    # ALLOWED_ORIGINS: List[str] = [
+    #     "https://douniecuisine.com",
+    #     "https://www.douniecuisine.com",
+    #     "http://localhost:3000", # Si le frontend React tourne sur le port 3000 en dev
+    #     "http://localhost:5173", # Port par défaut de Vite pour React
+    # ]
 
     model_config = SettingsConfigDict(
         env_file=".env",
