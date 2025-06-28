@@ -4,19 +4,16 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-# Imports pour SlowAPI
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from .core.rate_limiter import limiter # Importer notre instance de Limiter
-
 from .core.config import settings
 from .core.exceptions import DounieCuisineBaseException
 from .core.logging_config import setup_logging
 
+# Importer les routeurs
 from .routers import auth as auth_router
 from .routers import users as users_router
 from .routers import roles as roles_router
 from .routers import permissions as permissions_router
+from .routers import company_settings as company_settings_router # Ajout du routeur company_settings
 
 setup_logging()
 logger = logging.getLogger("app.main")
@@ -26,14 +23,15 @@ app = FastAPI(
     version=settings.APP_VERSION,
     debug=settings.DEBUG_MODE,
     description=("API pour la gestion intégrée de Dounie Cuisine, service traiteur et organisateur d'événements."),
+    # root_path="/api/v1", # Si l'API est servie sous un préfixe global
 )
 
 # --- Middlewares ---
-# Le state est nécessaire pour SlowAPI si on utilise des décorateurs sur les routes
-# et que key_func a besoin de request.state (pas notre cas avec get_remote_address simple)
-# Mais c'est une bonne pratique de l'avoir si on étend SlowAPI.
-app.state.limiter = limiter # Rendre le limiteur accessible via request.app.state.limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler) # Handler par défaut de SlowAPI
+app.state.limiter = None # Placeholder pour le rate limiter, sera initialisé si slowapi est utilisé
+# from .core.rate_limiter import limiter # Décommenter si slowapi est configuré
+# app.state.limiter = limiter
+# from slowapi.errors import RateLimitExceeded # Décommenter si slowapi est configuré
+# app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler) # Décommenter
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,29 +76,28 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 # --- Inclusion des Routeurs ---
-# Les limites de taux spécifiques seraient appliquées directement dans les fichiers de routeurs
-# Exemple dans app/routers/auth.py:
-# @router.post("/login")
-# @limiter.limit("5/minute") # Nécessite que la requête soit passée à la fonction de route
-# async def login_for_access_token(request: Request, ...):
+API_PREFIX = "/api/v1" # Préfixe global pour toutes les routes de l'API
 
-app.include_router(auth_router.router, prefix="/auth", tags=["Authentification & Utilisateurs (Auth)"])
-app.include_router(users_router.router, prefix="/users", tags=["Utilisateurs (Admin & Profil)"])
-app.include_router(roles_router.router, prefix="/roles", tags=["Rôles (Admin)"])
-app.include_router(permissions_router.router, prefix="/permissions", tags=["Permissions (Admin)"])
+app.include_router(auth_router.router, prefix=f"{API_PREFIX}/auth", tags=["Authentification & Utilisateurs (Auth)"])
+app.include_router(users_router.router, prefix=f"{API_PREFIX}/users", tags=["Utilisateurs (Admin & Profil)"])
+app.include_router(roles_router.router, prefix=f"{API_PREFIX}/roles", tags=["Rôles (Admin)"])
+app.include_router(permissions_router.router, prefix=f"{API_PREFIX}/permissions", tags=["Permissions (Admin)"])
+app.include_router(company_settings_router.router, prefix=f"{API_PREFIX}/company-settings", tags=["Paramètres de l'Entreprise"])
 
-# --- Routes de base ---
+
+# --- Routes de base (pourraient être retirées ou aussi préfixées) ---
 @app.get("/", tags=["Racine"])
-async def read_root(): # request: Request n'est pas nécessaire si pas de limite de taux ici
+async def read_root():
     logger.info("Route racine '/' appelée.")
     return {
         "message": f"Bienvenue sur {settings.APP_NAME} v{settings.APP_VERSION}",
         "debug_mode": settings.DEBUG_MODE,
+        "api_prefix": API_PREFIX,
         "docs_url": app.docs_url,
         "redoc_url": app.redoc_url
     }
 
 @app.get("/ping", tags=["Utilitaires"])
-async def ping(): # request: Request n'est pas nécessaire
+async def ping():
     logger.debug("Route '/ping' appelée.")
     return {"ping": "pong!"}
