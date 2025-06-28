@@ -2,6 +2,7 @@ import uuid
 from typing import List, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+from pydantic import BaseModel, Field # Assurer que Field est importé
 from sqlalchemy.orm import Session
 
 from app import models, schemas, services
@@ -21,7 +22,7 @@ SUPERUSER_DEPENDENCY = Depends(dependencies.get_current_active_superuser)
 def create_user_by_admin(
     *,
     db: Session = Depends(dependencies.get_db),
-    user_in: schemas.UserCreate,
+    user_in: schemas.user.UserCreate,
 ):
     try:
         user = services.user_service.create_user(db=db, user_in=user_in)
@@ -120,9 +121,6 @@ def delete_user_by_admin(
     user_to_delete = services.user_service.get_user(db, user_id=user_id)
     if not user_to_delete:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur non trouvé.")
-    # On pourrait ajouter une logique pour empêcher la suppression de soi-même ou du dernier superadmin
-    # if current_admin.id == user_to_delete.id:
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Suppression de soi-même non autorisée.")
     deleted_user = services.user_service.delete_user(db, user_to_delete=user_to_delete)
     return deleted_user
 
@@ -132,32 +130,24 @@ class UserRolesUpdate(BaseModel):
 
 @router.put(
     "/{user_id}/roles",
-    response_model=schemas.UserRead, # Retourne l'utilisateur avec ses rôles mis à jour
+    response_model=schemas.UserRead,
     summary="Définir les rôles pour un utilisateur (Admin)",
     dependencies=[SUPERUSER_DEPENDENCY]
 )
 def set_roles_for_user_endpoint(
     user_id: uuid.UUID,
-    roles_update: UserRolesUpdate, # Pydantic s'occupe de lire le corps de la requête
+    roles_update: UserRolesUpdate,
     db: Session = Depends(dependencies.get_db),
 ):
-    """
-    Assigne un ensemble de rôles à un utilisateur.
-    Ceci REMPLACE tous les rôles existants de l'utilisateur par ceux fournis.
-    """
     user = services.user_service.get_user(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur non trouvé.")
-
     try:
-        # La validation de l'existence des role_ids est faite dans le service set_user_roles
         updated_user = services.user_service.set_user_roles(
             db, user=user, role_ids=roles_update.role_ids
         )
-    except EntityNotFoundError as e: # Si un rôle ID n'est pas trouvé
+    except EntityNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e_generic:
-        # Logguer e_generic
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erreur interne lors de l'assignation des rôles: {e_generic}")
-
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erreur interne lors de l'assignation des rôles.")
     return updated_user
