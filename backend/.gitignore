@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+.env
+*.db
+alembic.ini
+# alembic_migrations/ # On veut versionner les migrations générées, mais pas les logs ou autres artefacts temporaires d'Alembic
+# alembic_migrations/versions/*.py # On veut versionner ça
+# Donc, on ne met pas alembic_migrations/ dans .gitignore, mais on pourrait ignorer des sous-fichiers spécifiques si besoin.
