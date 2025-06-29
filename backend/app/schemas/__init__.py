@@ -10,8 +10,11 @@ from .role import (
 from .permission import (
     PermissionBase, PermissionCreate, PermissionUpdate, PermissionRead, PermissionList
 )
-from .company_settings import ( # Ajout des nouveaux schémas
-    CompanySettingsRead,
-    CompanySettingsUpdate,
-    SocialMediaLink
+from .company_settings import (
+    CompanySettingsRead, CompanySettingsUpdate, SocialMediaLink
+)
+from .menu import ( # Ajout des nouveaux schémas de menu
+    MenuCategoryBase, MenuCategoryCreate, MenuCategoryUpdate, MenuCategoryRead, MenuCategoryList,
+    MenuItemBase, MenuItemCreate, MenuItemUpdate, MenuItemRead, MenuItemList,
+    MenuItemReadMinimal, MenuCategoryReadMinimal # Exporter aussi les versions minimales
 )

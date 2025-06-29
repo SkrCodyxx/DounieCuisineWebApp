@@ -13,7 +13,9 @@ from .routers import auth as auth_router
 from .routers import users as users_router
 from .routers import roles as roles_router
 from .routers import permissions as permissions_router
-from .routers import company_settings as company_settings_router # Ajout du routeur company_settings
+from .routers import company_settings as company_settings_router
+from .routers import menu_categories as menu_categories_router # Ajout du routeur catégories menu
+from .routers import menu_items as menu_items_router         # Ajout du routeur articles menu
 
 setup_logging()
 logger = logging.getLogger("app.main")
@@ -27,11 +29,11 @@ app = FastAPI(
 )
 
 # --- Middlewares ---
-app.state.limiter = None # Placeholder pour le rate limiter, sera initialisé si slowapi est utilisé
-# from .core.rate_limiter import limiter # Décommenter si slowapi est configuré
+app.state.limiter = None
+# from .core.rate_limiter import limiter
 # app.state.limiter = limiter
-# from slowapi.errors import RateLimitExceeded # Décommenter si slowapi est configuré
-# app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler) # Décommenter
+# from slowapi.errors import RateLimitExceeded
+# app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,16 +78,18 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 # --- Inclusion des Routeurs ---
-API_PREFIX = "/api/v1" # Préfixe global pour toutes les routes de l'API
+API_PREFIX = "/api/v1"
 
 app.include_router(auth_router.router, prefix=f"{API_PREFIX}/auth", tags=["Authentification & Utilisateurs (Auth)"])
 app.include_router(users_router.router, prefix=f"{API_PREFIX}/users", tags=["Utilisateurs (Admin & Profil)"])
 app.include_router(roles_router.router, prefix=f"{API_PREFIX}/roles", tags=["Rôles (Admin)"])
 app.include_router(permissions_router.router, prefix=f"{API_PREFIX}/permissions", tags=["Permissions (Admin)"])
 app.include_router(company_settings_router.router, prefix=f"{API_PREFIX}/company-settings", tags=["Paramètres de l'Entreprise"])
+app.include_router(menu_categories_router.router, prefix=f"{API_PREFIX}/menu-categories", tags=["Menu - Catégories"]) # Nouveau
+app.include_router(menu_items_router.router, prefix=f"{API_PREFIX}/menu-items", tags=["Menu - Articles"])             # Nouveau
 
 
-# --- Routes de base (pourraient être retirées ou aussi préfixées) ---
+# --- Routes de base ---
 @app.get("/", tags=["Racine"])
 async def read_root():
     logger.info("Route racine '/' appelée.")
